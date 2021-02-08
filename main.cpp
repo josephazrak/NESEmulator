@@ -14,6 +14,9 @@
 #include <iostream>
 #include <bitset>
 #include <cassert>
+#include <fstream>
+#include <iterator>
+#include <vector>
 #include <thread>
 #include <chrono>
 
@@ -21,7 +24,7 @@ const std::string VERSION = "0.1 alpha";
 const double CPU_CLOCK = 1.789773 * 10e6; // 1.789 MHz is the clock speed of the 6502 in the
                                           // NES.
 
-int main() {
+int main(int argc, char **argv) {
     std::cout << std::endl << "NES Emulator version " << VERSION << std::endl;
     std::cout << "https://github.com/josephazrak" << std::endl;
     std::cout << "https://josephazrak.codes" << std::endl;
@@ -51,29 +54,27 @@ int main() {
      *    + WAIT for the extra number of cycles needed
      *
      */
+
     std::cout << "Running test suite." << std::endl;
 
     RAM test_ram;
-    MOS6502 test_cpu(test_ram);
+    MOS6502 test_cpu(&test_ram);
 
     // ============================
-    //  RAM TESTS
+    // RAM TESTS
     // ============================
 
-    uint8_t byteArray[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0xff, 0xfa, 0xfd, 0x0a, 0xde, 0xad, 0xbe, 0xef};
+    std::vector<uint8_t> byteArray {0x01, 0x02, 0x03, 0x04, 0xfa, 0xfd, 0xde, 0xad, 0xbe, 0xef, 0x4e, 0x99, 0xff, 0xff, 0xb1};
 
-    std::cout << "Writing " << sizeof(byteArray) << " byte(s) to RAM [@ $0000]" << std::endl;
+    std::cout << "Writing " << byteArray.size() << " byte(s) to RAM [@ $0000]" << std::endl;
+    test_ram.write_byte_vector(0x0000, byteArray);
 
-    for (address_t addr = 0; (addr <= constants::NES_RAM_SIZE) && (addr - 0 < (sizeof(byteArray) / sizeof(byteArray[0])) ); addr++)
-        test_ram.write_byte(addr, byteArray[addr]);
+    std::cout << "Dumping 100 bytes from [@ $0000]..." << std::endl;
 
-    std::cout << "Dumping 300 bytes from [@ $0000]..." << std::endl;
-
-    test_ram.write_byte_range(0x000a, 0x0014, 0xff);
-    test_ram.hexdump_bytes(0x0000, 300, 20);
+    test_ram.hexdump_bytes(0x0000, 100, 20);
 
     // ============================
-    //  CPU FLAG TESTS
+    // CPU FLAG TESTS
     // ============================
 
     std::cout << std::endl << "Doing CPU flag sanity check..." << std::endl;
@@ -93,6 +94,34 @@ int main() {
     assert(test_cpu.get_status() == 0b00000000);
 
     std::cout << "CPU flag sanity check succeeded." << std::endl;
+
+    // ============================
+    // LOAD USER BINARY
+    // ============================
+
+    std::cout << "Clearing RAM..." << std::endl;
+    test_ram.clear_address_space();
+
+    std::cout << "I will now read a file ``rom.bin'' and load it into $0000. Execution will start at $0004. Enter for OK, Ctrl-C for abort. ";
+    std::cin.get();
+
+    std::ifstream test_rom("rom.bin", std::ios::binary); // Read the file into a byte vector.
+    std::vector<uint8_t> test_rom_bytes (
+            (std::istreambuf_iterator<char>(test_rom)),
+            (std::istreambuf_iterator<char>()));
+    test_rom.close();
+
+    std::cout << "Read " << test_rom_bytes.size() << " byte(s) from file. Writing to $0000" << std::endl;
+    test_ram.write_byte_vector(0x0000, test_rom_bytes);
+
+    test_ram.hexdump_bytes(0x0000, 100, 20);
+
+    std::cout << std::endl << std::endl;
+    std::cout << "Starting processor with PC = $0004." << std::endl;
+
+    test_cpu.PC = 0x0004;
+
+    unsigned char cycles_taken = test_cpu.fetch_and_execute();
 
     return 0;
 }

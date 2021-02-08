@@ -34,12 +34,12 @@ const flag_t FLAG_N_NEGTV = {1 << 7, 7};
 
 class MOS6502
 {
-private:
+public: // TODO: FOR DEBUG REASONS, THIS IS INITIALLY PUBLIC. SET TO PRIVATE AFTER DEBUG
     // CPU status human-readable string
     std::string status = "stopped";
 
     // Pointer to the RAM object. RAM also contains ROM. Ha!
-    RAM NES_Ram;
+    RAM* NES_Ram;
 
     // CPU registers.
     uint8_t ACC = 0b00000000; // Accumulator.
@@ -50,11 +50,17 @@ private:
     uint8_t SP = 0b00000000;  // Stack pointer.
 
     // Other intermediate data.
-    uint8_t fetched = 0b0000000; // Fetched data.
-    address_t fetch_address = 0x0000; // Next fetch address (set by addressing mode function).
+    uint8_t fetch_address = 0x0000; // Where to fetch data (set by addressing mode function).
+    uint8_t branch_relative = 0x0000; // A helper variable used for branching. The REL addressing mode
+                                        // writes to this variable; it is then used in branch instructions.
 
-    // Fetch function.
+    uint8_t fetched = 0b0000000; // Fetched data.
+
+    // Fetch function. Populates `fetched' using `fetch_address'.
     void fetch_data();
+
+    // Fetch instruction. Executes the addr
+    uint8_t fetch_and_execute();
 
     // Opcode table.
     std::vector<instruction_t> lookup_table;
@@ -87,8 +93,10 @@ private:
     uint8_t IMP(); uint8_t IMM(); uint8_t ZP0(); uint8_t ZPX();
     uint8_t ZPY(); uint8_t REL(); uint8_t ABS(); uint8_t ABX();
     uint8_t ABY(); uint8_t IND(); uint8_t IZX(); uint8_t IZY();
+
+    instruction_t identify_instruction();
 public:
-    explicit MOS6502(RAM& ram_ref);
+    explicit MOS6502(RAM* ram_ref);
     ~MOS6502();
 
     // Sets a single flag (sets it to 1).
@@ -111,6 +119,9 @@ public:
 
     // Reset the processor.
     void reset();
+
+    // Run a single clock cycle.
+    void clock();
 };
 
 /**
