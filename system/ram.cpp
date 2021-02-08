@@ -15,7 +15,7 @@ RAM::RAM()
 }
 RAM::~RAM() = default;
 
-void RAM::write_byte(address_t addr, byte_t value)
+void RAM::write_byte(address_t addr, uint8_t value)
 {
     // Write the data ``value'' to the memory address ``addr''.
     // Deny the write if it is out-of-bounds.
@@ -25,13 +25,13 @@ void RAM::write_byte(address_t addr, byte_t value)
     ram_data[addr] = value; // I don't see anything wrong with just... doing this...
 }
 
-byte_t RAM::read_byte(address_t addr)
+uint8_t RAM::read_byte(address_t addr)
 {
     // Read the data at the memory address ``addr'' and return it.
     return ram_data[addr];
 }
 
-void RAM::write_byte_range(address_t addr_start, address_t addr_stop, byte_t value) {
+void RAM::write_byte_range(address_t addr_start, address_t addr_stop, uint8_t value) {
     // Write a single value into a byte range.
     for (address_t addr = addr_start; addr < addr_stop; addr++)
     {
@@ -50,7 +50,7 @@ void RAM::hexdump_bytes(address_t addr_start, unsigned int bytes_to_read, unsign
         address_t row_base_address = addr_start + (row_width * row_id);
 
         // Print the base address
-        std::cout << std::endl << "0x" << std::hex << std::setw(4) << row_base_address << std::dec << " | ";
+        std::cout << std::endl << "$" << std::hex << std::setw(4) << row_base_address << std::dec << " | ";
 
         // Start printing n=row_width bytes
         for (unsigned int byte_id = 0; byte_id < row_width; byte_id++)
