@@ -9,18 +9,23 @@
 
 #include "system/mos6502.hpp"
 #include "system/ram.hpp"
+#include <allegro5/allegro5.h>
+#include <allegro5/allegro_font.h>
 #include <iostream>
 #include <bitset>
+#include <cassert>
+#include <thread>
+#include <chrono>
 
 const std::string VERSION = "0.1 alpha";
 const double CPU_CLOCK = 1.789773 * 10e6; // 1.789 MHz is the clock speed of the 6502 in the
                                           // NES.
 
 int main() {
-    std::cout << "\tNES Emulator version " << VERSION << std::endl << std::endl;
+    std::cout << std::endl << "NES Emulator version " << VERSION << std::endl;
     std::cout << "https://github.com/josephazrak" << std::endl;
     std::cout << "https://josephazrak.codes" << std::endl;
-    std::cout << "========================" << std::endl;
+    std::cout << "========================" << std::endl << std::endl;
 
     /**
      * Program flow
@@ -36,63 +41,58 @@ int main() {
      *    + IDENTIFY instruction
      *        * get OPCODE
      *        * get ADDRESSING MODE
+     *        * get CYCLES
      *        * get OPERAND SIZE
      *    + READ OPERANDS
-     *
+     *    + RUN the function assoc. with the ADDRESSING MODE
+     *        * the FUNCTION should retrieve the data and put it into the pseudo-register "fetched"
+     *    + RUN the function assoc. with the OPCODE
+     *        * works on "fetched" data
+     *    + WAIT for the extra number of cycles needed
      *
      */
-
     std::cout << "Running test suite." << std::endl;
 
     RAM test_ram;
-    MOS6502 cpu(test_ram);
+    MOS6502 test_cpu(test_ram);
 
     // ============================
     //  RAM TESTS
     // ============================
 
-    std::cout << "Writing some bytes to RAM..." << std::endl;
+    uint8_t byteArray[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0xff, 0xfa, 0xfd, 0x0a, 0xde, 0xad, 0xbe, 0xef};
 
-    byte_t byteArray[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0xff, 0xfa, 0xfd, 0x0a, 0xde, 0xad, 0xbe, 0xef};
+    std::cout << "Writing " << sizeof(byteArray) << " byte(s) to RAM [@ $0000]" << std::endl;
 
     for (address_t addr = 0; (addr <= constants::NES_RAM_SIZE) && (addr - 0 < (sizeof(byteArray) / sizeof(byteArray[0])) ); addr++)
-    {
         test_ram.write_byte(addr, byteArray[addr]);
-    }
 
-    std::cout << "Dumping 33 bytes from 0x0000..." << std::endl;
+    std::cout << "Dumping 300 bytes from [@ $0000]..." << std::endl;
 
     test_ram.write_byte_range(0x000a, 0x0014, 0xff);
-    test_ram.hexdump_bytes(0x0000, 33, 10);
+    test_ram.hexdump_bytes(0x0000, 300, 20);
 
     // ============================
     //  CPU FLAG TESTS
     // ============================
 
-    std::cout << "Testing CPU flag functionality..." << std::endl;
-    cpu.whoami();
+    std::cout << std::endl << "Doing CPU flag sanity check..." << std::endl;
 
-    std::cout << std::endl;
-    std::cout << "Setting the D, N, C flags..." << std::endl;
-    cpu.set_flag(FLAG_D_DECI);
-    cpu.set_flag(FLAG_N_NEGTV);
-    cpu.set_flag(FLAG_C_CARRY);
+    test_cpu.set_flag(FLAG_D_DECI);
+    test_cpu.set_flag(FLAG_N_NEGTV);
+    test_cpu.set_flag(FLAG_C_CARRY);
+    assert(test_cpu.get_status() == 0b10001001);
 
-    cpu.whoami();
+    test_cpu.flip_flag(FLAG_N_NEGTV);
+    test_cpu.flip_flag(FLAG_Z_ZERO);
+    assert(test_cpu.get_status() == 0b00001011);
 
-    std::cout << std::endl;
-    std::cout << "Flipping the the N and Z flags..." << std::endl;
-    cpu.flip_flag(FLAG_N_NEGTV);
-    cpu.flip_flag(FLAG_Z_ZERO);
+    test_cpu.clear_flag(FLAG_D_DECI);
+    test_cpu.clear_flag(FLAG_Z_ZERO);
+    test_cpu.clear_flag(FLAG_C_CARRY);
+    assert(test_cpu.get_status() == 0b00000000);
 
-    cpu.whoami();
+    std::cout << "CPU flag sanity check succeeded." << std::endl;
 
-    std::cout << std::endl;
-    std::cout << "Clearing all flags..." << std::endl;
-    cpu.clear_flag(FLAG_Z_ZERO);
-    cpu.clear_flag(FLAG_D_DECI);
-    cpu.clear_flag(FLAG_C_CARRY);
-
-    cpu.whoami();
     return 0;
 }
