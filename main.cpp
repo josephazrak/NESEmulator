@@ -24,7 +24,7 @@ const std::string VERSION = "0.1 alpha";
 const double CPU_CLOCK = 1.789773 * 10e6; // 1.789 MHz is the clock speed of the 6502 in the
                                           // NES.
 
-int main(int argc, char **argv) {
+[[noreturn]] int main(int argc, char **argv) {
     std::cout << std::endl << "NES Emulator version " << VERSION << std::endl;
     std::cout << "https://github.com/josephazrak" << std::endl;
     std::cout << "https://josephazrak.codes" << std::endl;
@@ -59,19 +59,6 @@ int main(int argc, char **argv) {
 
     RAM test_ram;
     MOS6502 test_cpu(&test_ram);
-
-    // ============================
-    // RAM TESTS
-    // ============================
-
-    std::vector<uint8_t> byteArray {0x01, 0x02, 0x03, 0x04, 0xfa, 0xfd, 0xde, 0xad, 0xbe, 0xef, 0x4e, 0x99, 0xff, 0xff, 0xb1};
-
-    std::cout << "Writing " << byteArray.size() << " byte(s) to RAM [@ $0000]" << std::endl;
-    test_ram.write_byte_vector(0x0000, byteArray);
-
-    std::cout << "Dumping 100 bytes from [@ $0000]..." << std::endl;
-
-    test_ram.hexdump_bytes(0x0000, 100, 20);
 
     // ============================
     // CPU FLAG TESTS
@@ -117,11 +104,15 @@ int main(int argc, char **argv) {
     test_ram.hexdump_bytes(0x0000, 100, 20);
 
     std::cout << std::endl << std::endl;
-    std::cout << "Starting processor with PC = $0004." << std::endl;
+    std::cout << "Starting processor with PC = $0004. Ctrl-C to stop emulation." << std::endl;
 
     test_cpu.PC = 0x0004;
+    std::chrono::milliseconds clock_period(3000); // 3 seconds per clock cycle.
 
-    unsigned char cycles_taken = test_cpu.fetch_and_execute();
-
-    return 0;
+    // Main loop
+    while (true)
+    {
+        test_cpu.clock();
+        std::this_thread::sleep_for(clock_period);
+    }
 }

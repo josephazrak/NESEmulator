@@ -126,7 +126,34 @@ uint8_t MOS6502::fetch_and_execute()
 
 void MOS6502::clock()
 {
+    if (clock_cycles_remaining > 0)
+    {
+        std::cout << "[Clock] We are still processing an instruction; " << (int)clock_cycles_remaining << " cycle(s) left" << std::endl;
+        clock_cycles_remaining--;
+        return; // We are done for this clock cycle.
+    }
 
+    // If we have gotten to this point, the last instruction has successfully
+    // completed. Let's load the next instruction, which now should be at PC.
+    // Increment PC because we have now read that byte.
+    uint8_t instruction_opcode = this->NES_Ram->read_byte(PC++);
+
+    // Retrieve information about this opcode, such as the addressing mode
+    // and minimum clock cycles.
+    clock_cycles_remaining = lookup_table[instruction_opcode].cycles;
+    std::cout << "[Clock] Read new opcode: " << lookup_table[instruction_opcode].name << std::endl;
+
+    // Run the addressing mode function to retrieve the to-fetch address and
+    // run the operation function to actually perform the operation.
+    uint8_t adcycle_1 = (this->*lookup_table[instruction_opcode].addrmode)();
+    uint8_t adcycle_2 = (this->*lookup_table[instruction_opcode].operate)();
+
+    // If both adcycle_1 and adcycle_2 are equal to 1, then add 1 to clock_cycles_remaining.
+    clock_cycles_remaining += (adcycle_1 & adcycle_2);
+
+    std::cout << "[Clock] Now faking this many clock cycles: " << (int)clock_cycles_remaining << std::endl;
+
+    clock_cycles_remaining--;
 }
 
 // ===========================
@@ -296,7 +323,15 @@ uint8_t MOS6502::BCS()
 
 uint8_t MOS6502::BEQ()
 {
+    // Operation: Branch on Result Zero
+    // Check whether the zero-flag is set. If so, invoke REL addressing mode,
+    // apply the offset that is the result of REL, and jump there. If not,
+    // do nothing.
 
+    if (get_flag(FLAG_Z_ZERO))
+    {
+
+    }
 }
 
 uint8_t MOS6502::BIT()

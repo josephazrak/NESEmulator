@@ -50,11 +50,12 @@ public: // TODO: FOR DEBUG REASONS, THIS IS INITIALLY PUBLIC. SET TO PRIVATE AFT
     uint8_t SP = 0b00000000;  // Stack pointer.
 
     // Other intermediate data.
-    uint8_t fetch_address = 0x0000; // Where to fetch data (set by addressing mode function).
+    uint8_t fetch_address = 0x0000;   // Where to fetch data (set by addressing mode function).
     uint8_t branch_relative = 0x0000; // A helper variable used for branching. The REL addressing mode
-                                        // writes to this variable; it is then used in branch instructions.
+                                      // writes to this variable; it is then used in branch instructions.
 
     uint8_t fetched = 0b0000000; // Fetched data.
+    uint8_t clock_cycles_remaining = 0; // How many clock cycles are left to fake.
 
     // Fetch function. Populates `fetched' using `fetch_address'.
     void fetch_data();
