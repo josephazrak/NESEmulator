@@ -20,41 +20,17 @@
 #include <thread>
 #include <chrono>
 
-const std::string VERSION = "0.1 alpha";
+const std::string VERSION = "0.1 alpha (test)";
 const double CPU_CLOCK = 1.789773 * 10e6; // 1.789 MHz is the clock speed of the 6502 in the
                                           // NES.
 
-[[noreturn]] int main(int argc, char **argv) {
+int main(int argc, char **argv) {
+    address_t ENTRY_POINT = 0x0004; // TODO: iNES parser should set this; this should not be hardcoded.
+
     std::cout << std::endl << "NES Emulator version " << VERSION << std::endl;
     std::cout << "https://github.com/josephazrak" << std::endl;
     std::cout << "https://josephazrak.codes" << std::endl;
     std::cout << "========================" << std::endl << std::endl;
-
-    /**
-     * Program flow
-     *
-     *
-     * - Load ROM
-     * - Read ROM HEADER
-     * - Determine ENTRY POINT
-     * - Start 6502 EMULATOR
-     * - Set @PC to ENTRY POINT
-     * - LOOP:
-     *    + READ 1 byte at offset @PC
-     *    + IDENTIFY instruction
-     *        * get OPCODE
-     *        * get ADDRESSING MODE
-     *        * get CYCLES
-     *        * get OPERAND SIZE
-     *    + READ OPERANDS
-     *    + RUN the function assoc. with the ADDRESSING MODE
-     *        * the FUNCTION should retrieve the data and put it into the pseudo-register "fetched"
-     *    + RUN the function assoc. with the OPCODE
-     *        * works on "fetched" data
-     *    + WAIT for the extra number of cycles needed
-     *
-     */
-
     std::cout << "Running test suite." << std::endl;
 
     RAM test_ram;
@@ -89,18 +65,16 @@ const double CPU_CLOCK = 1.789773 * 10e6; // 1.789 MHz is the clock speed of the
     std::cout << "Clearing RAM..." << std::endl;
     test_ram.clear_address_space();
 
-    std::cout << "I will now read a file ``rom.bin'' and load it into $0000. Execution will start at $0004. Enter for OK, Ctrl-C for abort. ";
+    std::cout << "Will now read the file ``rom.bin'' and load it into $0000. Execution will start at $0004. Press <enter> if that's OK or <ctrl-c> to abort. ";
     std::cin.get();
 
-    std::ifstream test_rom("rom.bin", std::ios::binary); // Read the file into a byte vector.
-    std::vector<uint8_t> test_rom_bytes (
-            (std::istreambuf_iterator<char>(test_rom)),
-            (std::istreambuf_iterator<char>()));
+    std::ifstream test_rom("rom.bin", std::ios::binary);
+    std::vector<uint8_t> test_rom_bytes ((std::istreambuf_iterator<char>(test_rom)),(std::istreambuf_iterator<char>())); // Load rom into byte array
     test_rom.close();
 
     std::cout << "Read " << test_rom_bytes.size() << " byte(s) from file. Writing to $0000" << std::endl;
-    test_ram.write_byte_vector(0x0000, test_rom_bytes);
 
+    test_ram.write_byte_vector(0x0000, test_rom_bytes);
     test_ram.hexdump_bytes(0x0000, 100, 20);
 
     std::cout << std::endl << std::endl;

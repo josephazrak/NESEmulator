@@ -9,11 +9,6 @@
 #include <vector>
 #include <string>
 
-struct opcode
-{
-    uint8_t opcode_byte;   // A single byte which identifies this operation
-};
-
 struct flag_t
 {
     uint8_t bitmask;
@@ -42,26 +37,27 @@ public: // TODO: FOR DEBUG REASONS, THIS IS INITIALLY PUBLIC. SET TO PRIVATE AFT
     RAM* NES_Ram;
 
     // CPU registers.
-    uint8_t ACC = 0b00000000; // Accumulator.
-    uint8_t X = 0b00000000;   // X-register.
-    uint8_t Y = 0b00000000;   // Y-register.
-    uint8_t FLG = 0b00000000; // Status flags.
-    uint8_t PC = 0b00000000;  // Program counter.
-    uint8_t SP = 0b00000000;  // Stack pointer.
+    uint8_t ACC = 0; // Accumulator.
+    uint8_t X   = 0; // X-register.
+    uint8_t Y   = 0; // Y-register.
+    uint8_t FLG = 0; // Status flags, don't r/w to this directly, use set_flag/clear_flag/flip_flag
+    uint8_t PC  = 0; // Program counter.
+    uint8_t SP  = 0; // Stack pointer.
 
     // Other intermediate data.
     uint8_t fetch_address = 0x0000;   // Where to fetch data (set by addressing mode function).
+
     uint8_t branch_relative = 0x0000; // A helper variable used for branching. The REL addressing mode
-                                      // writes to this variable; it is then used in branch instructions.
+                                      // writes to this variable; it is then used in branch instruction.
+
+    uint8_t last_read_opcode = 0x00;
 
     uint8_t fetched = 0b0000000; // Fetched data.
+
     uint8_t clock_cycles_remaining = 0; // How many clock cycles are left to fake.
 
     // Fetch function. Populates `fetched' using `fetch_address'.
     void fetch_data();
-
-    // Fetch instruction. Executes the addr
-    uint8_t fetch_and_execute();
 
     // Opcode table.
     std::vector<instruction_t> lookup_table;
@@ -95,7 +91,7 @@ public: // TODO: FOR DEBUG REASONS, THIS IS INITIALLY PUBLIC. SET TO PRIVATE AFT
     uint8_t ZPY(); uint8_t REL(); uint8_t ABS(); uint8_t ABX();
     uint8_t ABY(); uint8_t IND(); uint8_t IZX(); uint8_t IZY();
 
-    instruction_t identify_instruction();
+    uint8_t decode_signed_byte(uint8_t byte);
 public:
     explicit MOS6502(RAM* ram_ref);
     ~MOS6502();

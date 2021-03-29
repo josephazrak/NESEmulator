@@ -81,16 +81,6 @@ void MOS6502::whoami() const
     std::cout << "===================================" << std::endl;
 }
 
-instruction_t MOS6502::identify_instruction()
-{
-    uint8_t opcode = NES_Ram->read_byte(PC);
-
-    instruction_t current_instr = lookup_table[opcode];
-    std::cout << "opcode: " << current_instr.name << std::endl;
-
-    return current_instr;
-}
-
 void MOS6502::reset()
 {
     // Reset registers
@@ -103,21 +93,6 @@ void MOS6502::reset()
 void MOS6502::fetch_data()
 {
     fetched = NES_Ram->read_byte(fetch_address);
-}
-
-uint8_t MOS6502::fetch_and_execute()
-{
-    uint8_t cycles_so_far = 0;
-    uint8_t opcode_read = NES_Ram->read_byte(PC++);
-    cycles_so_far += (this->lookup_table[opcode_read].cycles);
-
-    // Invoke the addressing mode of the function.
-    cycles_so_far += (this->*lookup_table[opcode_read].addrmode)();
-
-    // Invoke the operation of the function.
-    cycles_so_far += (this->*lookup_table[opcode_read].operate)();
-
-    return cycles_so_far;
 }
 
 // ===========================
@@ -135,13 +110,14 @@ void MOS6502::clock()
 
     // If we have gotten to this point, the last instruction has successfully
     // completed. Let's load the next instruction, which now should be at PC.
-    // Increment PC because we have now read that byte.
+    // Increment PC because we have read that byte.
     uint8_t instruction_opcode = this->NES_Ram->read_byte(PC++);
 
     // Retrieve information about this opcode, such as the addressing mode
     // and minimum clock cycles.
     clock_cycles_remaining = lookup_table[instruction_opcode].cycles;
     std::cout << "[Clock] Read new opcode: " << lookup_table[instruction_opcode].name << std::endl;
+    last_read_opcode = instruction_opcode;
 
     // Run the addressing mode function to retrieve the to-fetch address and
     // run the operation function to actually perform the operation.
@@ -154,6 +130,17 @@ void MOS6502::clock()
     std::cout << "[Clock] Now faking this many clock cycles: " << (int)clock_cycles_remaining << std::endl;
 
     clock_cycles_remaining--;
+}
+
+// ===========================
+// HELPER FUNCTIONS
+// ===========================
+
+uint8_t MOS6502::decode_signed_byte(uint8_t byte)
+{
+    bool is_negative = !!((byte & 0x80) >> 7); // Bool determines whether the rel addr is negative.
+
+    return (byte & 0x7f) * (is_negative ? -1 : 1);
 }
 
 // ===========================
@@ -238,10 +225,9 @@ uint8_t MOS6502::REL()
 
     std::cout << "[Addressing] REL addressing invoked." << std::endl;
 
-    uint8_t buffer = NES_Ram->read_byte(PC++); // We need to determine whether this value is +-. 10100111
-    bool is_negative = !!((buffer & 0b10000000) >> 7); // Bool determines whether the rel addr is negative.
+    branch_relative = decode_signed_byte(NES_Ram->read_byte(PC++));
 
-    branch_relative = (buffer & 0b01111111) * (is_negative ? -1 : 1);
+    std::cout << std::dec << "[Addressing] Calculated jump = " << +branch_relative << std::endl;
 }
 
 /**
@@ -585,6 +571,11 @@ uint8_t MOS6502::TYA()
 }
 
 uint8_t MOS6502::XXX() {
-    // nop
+    std::cout << "[6502] Hit an unimplemented opcode at $" << std::setw(4) << std::hex << PC - 1 << std::dec << "." << std::endl;
+    std::cout << "[6502] byte \"" << std::setw(2) << std::hex << +last_read_opcode << "\" at $" << std::setw(4) << PC - 1 << std::endl;
+    std::cout << "[6502] Halting execution" << std::endl;
+
+    exit(0);
+
     return 0;
 }
